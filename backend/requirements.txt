@@ -1,0 +1,7 @@
+flask==2.3.3
+gunicorn==21.2.0
+transformers==4.35.2
+torch==2.1.1
+rapidfuzz==3.5.2
+tldextract==5.1.1
+requests==2.31.0
