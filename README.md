@@ -12,6 +12,7 @@ To get started, head over to the [Releases](https://github.com/elecxDev/baitbloc
 
 ## 🧩 Manual Installation Guide (Chromium Browsers)
 
+### **Extension**
 Follow these steps to install the extension manually:
 
 1. **Download** the ZIP file from the [release assets](https://github.com/elecxDev/baitblock/releases).
@@ -25,6 +26,24 @@ Follow these steps to install the extension manually:
 6. ✅ The extension is now installed and ready to use!
 
 ---
+
+### **Backend**
+
+To set up the backend server locally, follow these steps:
+
+1. **Extract** the `backend` folder from the ZIP file you downloaded.
+2. Open a terminal and navigate to the extracted backend directory.
+3. **Install dependencies** using the provided `requirements.txt` file:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Run the server**:
+   ```bash
+   python server.py
+   ```
+   > ⏳ The first run may take some time as it downloads the required ML model (~890MB). Please ensure you have a stable internet connection.
+
+5. Once the model is downloaded and initialized, the backend server will be up and running, ready to interface with the extension.
 
 ## 🚀 Features
 
