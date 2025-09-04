@@ -1,6 +1,6 @@
 
 
-let phishPanel = null;
+let baitPanel = null;
 let scanCache = new Map();
 
 function extractEmailContent() {
@@ -65,20 +65,20 @@ function extractUrls(text) {
 }
 
 function extractLinks(html, text) {
-  const links = [];
-  const hrefRegex = /href=["']([^"']+)["']/gi;
+  const allUrls = new Set();
   
   // Extract from text
   const textLinks = extractUrls(text);
-  textLinks.forEach(url => links.push({ url, source: 'text' }));
+  textLinks.forEach(url => allUrls.add(url));
   
   // Extract from HTML href attributes
+  const hrefRegex = /href=["']([^"']+)["']/gi;
   let match;
   while ((match = hrefRegex.exec(html)) !== null) {
-    links.push({ url: match[1], source: 'html' });
+    allUrls.add(match[1]);
   }
   
-  return [...new Set(links.map(l => l.url))].map(url => ({ url, suspicious: isSuspiciousUrl(url) }));
+  return Array.from(allUrls).map(url => ({ url, suspicious: isSuspiciousUrl(url) }));
 }
 
 function isSuspiciousUrl(url) {
@@ -105,11 +105,11 @@ function isSuspiciousUrl(url) {
 }
 
 async function scanText(text, emailData = null) {
-  console.log('🔍 PhishGuard: Starting scan for:', text);
+  console.log('🔍 BaitBlock: Starting scan for:', text);
   
   const cacheKey = emailData?.messageId || text.substring(0, 100);
   if (scanCache.has(cacheKey)) {
-    console.log('📋 PhishGuard: Using cached result');
+    console.log('📋 BaitBlock: Using cached result');
     return scanCache.get(cacheKey);
   }
   
@@ -128,47 +128,61 @@ async function scanText(text, emailData = null) {
     
     return result;
   } catch (err) {
-    console.error('❌ PhishGuard: Error:', err);
+    console.error('❌ BaitBlock: Error:', err);
     return { error: err.message || "Network error" };
   }
 }
 
 function createResultPanel(data, links = []) {
-  console.log('🎨 PhishGuard: Creating panel with data:', data);
+  console.log('🎨 BaitBlock: Creating panel with data:', data);
   removePanel();
   
-  phishPanel = document.createElement('div');
-  phishPanel.id = 'phishguard-panel';
+  baitPanel = document.createElement('div');
+  baitPanel.id = 'baitblock-panel';
+  
+  const linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9,12C3.9,10.29 5.29,8.9 7,8.9H11V7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H11V15.1H7C5.29,15.1 3.9,13.71 3.9,12M8,13H16V11H8V13M17,7H13V8.9H17C18.71,8.9 20.1,10.29 20.1,12C20.1,13.71 18.71,15.1 17,15.1H13V17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7Z"/></svg>`;
+  const warningIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>`;
+  const checkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.41,10.09L6,11.5L11,16.5Z"/></svg>`;
   
   const linksHtml = links.length > 0 ? `
     <div class="phish-links">
-      <div class="phish-links-header">🔗 Links Found:</div>
+      <div class="phish-links-header">${linkIcon} Links Found:</div>
       ${links.map(link => `
         <div class="phish-link ${link.suspicious ? 'suspicious' : 'safe'}">
-          ${link.suspicious ? '⚠️' : '✅'} <a href="${link.url}" target="_blank">${link.url}</a>
+          ${link.suspicious ? warningIcon : checkIcon} <a href="${link.url}" target="_blank">${link.url}</a>
         </div>
       `).join('')}
     </div>
   ` : '';
   
   if (data.loading) {
-    phishPanel.innerHTML = `
+    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
+    const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
+    
+    baitPanel.innerHTML = `
       <div class="phish-header">
-        <span>🛡️ PhishGuard</span>
-        <button class="phish-close">×</button>
+        <span class="header-title"><img src="${chrome.runtime.getURL('icon.png')}" width="20" height="20" style="vertical-align: middle; margin-right: 8px;"> BaitBlock</span>
+        <button class="phish-close">${closeIcon}</button>
       </div>
       <div class="phish-content">
-        <div class="phish-loading">🔍 Analyzing...</div>
+        <div class="phish-loading">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Analyzing content...</div>
+        </div>
       </div>
     `;
   } else if (data.error) {
-    phishPanel.innerHTML = `
+    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
+    const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
+    const errorIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"/></svg>`;
+    
+    baitPanel.innerHTML = `
       <div class="phish-header">
-        <span>🛡️ PhishGuard</span>
-        <button class="phish-close">×</button>
+        <span class="header-title"><img src="${chrome.runtime.getURL('icon.png')}" width="20" height="20" style="vertical-align: middle; margin-right: 8px;"> BaitBlock</span>
+        <button class="phish-close">${closeIcon}</button>
       </div>
       <div class="phish-content">
-        <div class="phish-error">❌ ${data.error}</div>
+        <div class="phish-error">${errorIcon} ${data.error}</div>
       </div>
     `;
   } else {
@@ -186,14 +200,19 @@ function createResultPanel(data, links = []) {
     const reasons = details.reasons || [];
     const reasonsHtml = reasons.length > 0 ? `
       <div class="phish-reasons-list">
-        ${reasons.map(reason => `<div class="reason-item">• ${reason}</div>`).join('')}
+        ${reasons.map(reason => `<div class="reason-item">${reason}</div>`).join('')}
       </div>
     ` : '';
     
-    phishPanel.innerHTML = `
+    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
+    const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
+    const warningIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>`;
+    const checkIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.41,10.09L6,11.5L11,16.5Z"/></svg>`;
+    
+    baitPanel.innerHTML = `
       <div class="phish-header">
-        <span>🛡️ PhishGuard</span>
-        <button class="phish-close">×</button>
+        <span class="header-title"><img src="${chrome.runtime.getURL('icon.png')}" width="20" height="20" style="vertical-align: middle; margin-right: 8px;"> BaitBlock</span>
+        <button class="phish-close">${closeIcon}</button>
       </div>
       <div class="phish-content">
         <div class="phish-score ${riskLevel}">
@@ -203,7 +222,9 @@ function createResultPanel(data, links = []) {
           <div class="score-text">${label} (${score}% confidence)</div>
         </div>
         <div class="phish-reasons">
-          ${isPhishing ? '⚠️ Why this looks like phishing:' : '✅ Content appears safe'}
+          <div class="reasons-header">
+            ${isPhishing ? `${warningIcon} Why this looks like phishing:` : `${checkIcon} Content appears safe`}
+          </div>
           ${reasonsHtml}
         </div>
         ${linksHtml}
@@ -211,15 +232,15 @@ function createResultPanel(data, links = []) {
     `;
   }
   
-  document.body.appendChild(phishPanel);
+  document.body.appendChild(baitPanel);
   
-  phishPanel.querySelector('.phish-close').onclick = removePanel;
+  baitPanel.querySelector('.phish-close').onclick = removePanel;
 }
 
 function removePanel() {
-  if (phishPanel) {
-    phishPanel.remove();
-    phishPanel = null;
+  if (baitPanel) {
+    baitPanel.remove();
+    baitPanel = null;
   }
 }
 
@@ -248,7 +269,7 @@ function autoScanEmail() {
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-  console.log('📨 PhishGuard: Received message:', message);
+  console.log('📨 BaitBlock: Received message:', message);
   
   if (message.type === "SHOW_LOADING") {
     createResultPanel({ loading: true });

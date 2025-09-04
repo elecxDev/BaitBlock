@@ -16,20 +16,20 @@ async function callLocalAPI(text) {
     console.log('✅ Local API Response:', result);
     return result;
   } catch (error) {
-    console.error('❌ PhishGuard API Error:', error);
-    return { error: "PhishGuard server is offline. Start the local server." };
+    console.error('❌ BaitBlock API Error:', error);
+    return { error: "BaitBlock server is offline. Start the local server." };
   }
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('🛡️ PhishGuard: Extension installed');
+  console.log('🛡️ BaitBlock: Extension installed');
   chrome.contextMenus.create({
-    id: "phishguard-scan",
+    id: "baitblock-scan",
     title: "Check for phishing",
     contexts: ["selection"]
   });
   chrome.contextMenus.create({
-    id: "phishguard-scan-email",
+    id: "baitblock-scan-email",
     title: "🛡️ Scan this email",
     contexts: ["page"],
     documentUrlPatterns: [
@@ -42,9 +42,9 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  console.log('🖱️ PhishGuard: Context menu clicked:', info);
-  if (info.menuItemId === "phishguard-scan" && info.selectionText) {
-    console.log('📤 PhishGuard: Sending scan request for:', info.selectionText);
+  console.log('🖱️ BaitBlock: Context menu clicked:', info);
+  if (info.menuItemId === "baitblock-scan" && info.selectionText) {
+    console.log('📤 BaitBlock: Sending scan request for:', info.selectionText);
     
     // Show loading sidebar immediately
     chrome.tabs.sendMessage(tab.id, {
@@ -56,8 +56,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       type: "SHOW_RESULT",
       result: result
     });
-  } else if (info.menuItemId === "phishguard-scan-email") {
-    console.log('📧 PhishGuard: Scanning email');
+  } else if (info.menuItemId === "baitblock-scan-email") {
+    console.log('📧 BaitBlock: Scanning email');
     chrome.tabs.sendMessage(tab.id, {
       type: "SCAN_EMAIL"
     });

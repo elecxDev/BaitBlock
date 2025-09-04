@@ -1,13 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "PhishGuard",
+  "name": "BaitBlock",
   "version": "1.0.0",
-  "description": "Right-click any text to check for phishing.",
+  "description": "Block the bait, learn to spot the hook.",
   "action": {
-    "default_title": "PhishGuard",
-    "default_popup": "popup.html"
+    "default_title": "BaitBlock",
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
   },
-  "permissions": ["contextMenus", "storage", "activeTab", "scripting"],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "permissions": ["contextMenus", "storage", "activeTab", "scripting", "tabs"],
+  "web_accessible_resources": [
+    {
+      "resources": ["icon.png"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "host_permissions": [
     "http://localhost:5000/*",
     "https://mail.google.com/*",
