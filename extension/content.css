@@ -1,0 +1,247 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+#phishguard-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  bottom: 20px;
+  width: 380px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
+  box-shadow: -10px 0 40px rgba(0,0,0,0.3);
+  z-index: 10000;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: white;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.phish-header {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.phish-close {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phish-close:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.1);
+}
+
+.phish-content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.phish-loading {
+  text-align: center;
+  color: rgba(255,255,255,0.8);
+  font-size: 16px;
+  padding: 40px 0;
+}
+
+.phish-score {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.phish-score.high {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  box-shadow: 0 8px 32px rgba(255,107,107,0.3);
+}
+
+.phish-score.low {
+  background: linear-gradient(135deg, #00d2d3, #54a0ff);
+  box-shadow: 0 8px 32px rgba(0,210,211,0.3);
+}
+
+.score-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.score-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, #00d2d3, #ff6b6b);
+  position: relative;
+}
+
+.score-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.score-text {
+  font-size: 16px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.phish-reasons {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.phish-reasons-list {
+  margin-top: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.reason-item {
+  font-size: 13px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  border-left: 3px solid #ff6b6b;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+.reason-item:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.phish-error {
+  color: #ff6b6b;
+  font-weight: 600;
+  background: rgba(255,107,107,0.1);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,107,107,0.2);
+}
+
+.phish-links {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.phish-links-header {
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+}
+
+.phish-link {
+  font-size: 12px;
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  word-break: break-all;
+  transition: all 0.2s ease;
+}
+
+.phish-link a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.phish-link a:hover {
+  text-decoration: underline;
+}
+
+.phish-link.suspicious {
+  background: rgba(255,107,107,0.2);
+  border-left: 3px solid #ff6b6b;
+  color: #ffcccb;
+}
+
+.phish-link.safe {
+  background: rgba(0,210,211,0.2);
+  border-left: 3px solid #00d2d3;
+  color: #b3f0ff;
+}
+
+.phish-link:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* Custom scrollbar */
+#phishguard-panel::-webkit-scrollbar,
+.phish-reasons-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#phishguard-panel::-webkit-scrollbar-track,
+.phish-reasons-list::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+#phishguard-panel::-webkit-scrollbar-thumb,
+.phish-reasons-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 3px;
+}
+
+#phishguard-panel::-webkit-scrollbar-thumb:hover,
+.phish-reasons-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
+}
