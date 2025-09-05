@@ -68,6 +68,19 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.type === "ANALYZE_TEXT") {
     const result = await callLocalAPI(message.text);
     sendResponse(result);
+  } else if (message.type === "POPUP_SCAN") {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    chrome.tabs.sendMessage(tab.id, {
+      type: "SHOW_LOADING"
+    });
+    
+    const result = await callLocalAPI(message.text);
+    
+    chrome.tabs.sendMessage(tab.id, {
+      type: "SHOW_RESULT",
+      result: result
+    });
   }
   return true;
 });

@@ -289,6 +289,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     } else {
       createResultPanel({ error: "No email content found" });
     }
+  } else if (message.type === "ANALYZE_POPUP_TEXT") {
+    createResultPanel({ loading: true });
+    
+    const result = await scanText(message.text);
+    createResultPanel(result, []);
   }
 });
 

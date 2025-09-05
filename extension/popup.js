@@ -6,20 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = textInput.value.trim();
     if (!text) return;
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    chrome.tabs.sendMessage(tab.id, {
-      type: "SHOW_LOADING"
-    });
-    
-    const result = await chrome.runtime.sendMessage({
-      type: "ANALYZE_TEXT",
+    chrome.runtime.sendMessage({
+      type: "POPUP_SCAN",
       text: text
-    });
-    
-    chrome.tabs.sendMessage(tab.id, {
-      type: "SHOW_RESULT",
-      result: result
     });
     
     window.close();
