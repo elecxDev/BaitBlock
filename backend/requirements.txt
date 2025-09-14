@@ -1,7 +1,5 @@
 fastapi
-uvicorn[standard]
-gunicorn
+uvicorn
 transformers
 torch
 pydantic
-python-multipart

@@ -1,6 +1,5 @@
 import re
 import time
-import os
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,9 +8,6 @@ from transformers import pipeline
 import uvicorn
 
 app = FastAPI(title="BaitBlock API")
-
-# Get port from environment variable (Render provides this)
-PORT = int(os.environ.get("PORT", 5000))
 
 app.add_middleware(
     CORSMiddleware,
@@ -425,10 +421,6 @@ def analyze_text(text):
         "short_text": is_short_text
     }
 
-@app.get("/healthz")
-async def health_check():
-    return {"status": "healthy", "message": "BaitBlock API is running"}
-
 @app.post("/predict")
 async def predict(request: PredictRequest):
     try:
@@ -454,4 +446,4 @@ async def predict(request: PredictRequest):
 
 if __name__ == "__main__":
     print("🛡️ BaitBlock server starting...")
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="localhost", port=5000)
