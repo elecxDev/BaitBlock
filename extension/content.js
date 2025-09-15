@@ -2,6 +2,79 @@
 
 let baitPanel = null;
 let scanCache = new Map();
+let userProfileManager = null;
+let threatAdapter = null;
+
+// Initialize user profile system
+async function initializeUserProfile() {
+  if (typeof UserProfileManager !== 'undefined') {
+    userProfileManager = new UserProfileManager();
+    threatAdapter = new ThreatLandscapeAdapter();
+    await userProfileManager.loadProfile();
+    
+    // Check if user needs setup
+    const stored = await chrome.storage.local.get(['setupComplete']);
+    if (!stored.setupComplete && !userProfileManager.profile.setupComplete) {
+      // Show setup notification after a delay
+      setTimeout(() => {
+        showSetupPrompt();
+      }, 3000);
+    }
+  }
+}
+
+function showSetupPrompt() {
+  const setupPrompt = document.createElement('div');
+  setupPrompt.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 300px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  `;
+  
+  setupPrompt.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="font-size: 24px;">🛡️</div>
+      <div>
+        <div style="font-weight: 600; margin-bottom: 4px;">BaitBlock Setup</div>
+        <div style="opacity: 0.9; font-size: 13px;">Personalize your phishing protection</div>
+      </div>
+      <div style="margin-left: auto; font-size: 20px; opacity: 0.7;">→</div>
+    </div>
+  `;
+  
+  setupPrompt.addEventListener('mouseenter', () => {
+    setupPrompt.style.transform = 'translateY(-2px)';
+  });
+  
+  setupPrompt.addEventListener('mouseleave', () => {
+    setupPrompt.style.transform = 'translateY(0)';
+  });
+  
+  setupPrompt.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_SETUP' });
+    setupPrompt.remove();
+  });
+  
+  document.body.appendChild(setupPrompt);
+  
+  // Auto-hide after 10 seconds
+  setTimeout(() => {
+    if (setupPrompt.parentNode) {
+      setupPrompt.remove();
+    }
+  }, 10000);
+}
 
 function extractEmailContent() {
   const isGmail = window.location.hostname.includes('mail.google.com');
@@ -116,8 +189,38 @@ async function scanText(text, emailData = null) {
   try {
     const result = await chrome.runtime.sendMessage({
       type: "ANALYZE_TEXT",
-      text: emailData ? emailData.text : text
+      text: emailData ? emailData.text : text,
+      userContext: userProfileManager ? userProfileManager.getOrganizationContext() : null
     });
+    
+    // Apply personalized scoring if profile is available
+    if (userProfileManager && result.details) {
+      const baseScore = result.details.score || 0;
+      const personalizedScore = userProfileManager.getPersonalizedThreatMultiplier(baseScore);
+      
+      // Apply department-specific adjustments
+      if (threatAdapter) {
+        const deptMultiplier = threatAdapter.getDepartmentThreatMultiplier(
+          userProfileManager.profile.department,
+          result.details.reasons || []
+        );
+        result.details.personalizedScore = personalizedScore * deptMultiplier;
+        result.details.adaptiveFactors = {
+          userSensitivity: userProfileManager.profile.sensitivityLevel,
+          departmentMultiplier: deptMultiplier,
+          riskLevel: userProfileManager.profile.riskLevel
+        };
+      } else {
+        result.details.personalizedScore = personalizedScore;
+      }
+      
+      // Update the main result based on personalized scoring
+      const personalizedConfidence = Math.min(1.0, result.details.personalizedScore / 100);
+      result.data = [
+        result.data[0],
+        personalizedConfidence
+      ];
+    }
     
     scanCache.set(cacheKey, result);
     
@@ -196,13 +299,54 @@ function createResultPanel(data, links = []) {
     const riskLevel = isPhishing ? 'high' : 'low';
     const score = Math.round(confidence * 100);
     
+    // Get personalized alert configuration
+    const alertConfig = userProfileManager ? 
+      userProfileManager.getAlertConfiguration() : 
+      { showDetailedReasons: true, educationalTips: true };
+    
     // Format reasons
     const reasons = details.reasons || [];
-    const reasonsHtml = reasons.length > 0 ? `
+    const adaptiveFactors = details.adaptiveFactors || {};
+    
+    // Add personalized insights
+    const personalizedInsights = [];
+    if (userProfileManager) {
+      const profile = userProfileManager.profile;
+      if (profile.riskLevel === 'high' && isPhishing) {
+        personalizedInsights.push(`⚠️ High-priority alert for ${profile.department} role`);
+      }
+      if (adaptiveFactors.departmentMultiplier > 1.2) {
+        personalizedInsights.push(`🎯 Department-specific threat detected`);
+      }
+      if (profile.learningData.confirmedThreats > 5) {
+        personalizedInsights.push(`🧠 Adapted based on your feedback history`);
+      }
+    }
+    
+    const allReasons = [...personalizedInsights, ...reasons];
+    
+    const reasonsHtml = allReasons.length > 0 ? `
       <div class="phish-reasons-list">
-        ${reasons.map(reason => `<div class="reason-item">${reason}</div>`).join('')}
+        ${allReasons.map((reason, index) => {
+          const isPersonalized = index < personalizedInsights.length;
+          return `<div class="reason-item ${isPersonalized ? 'personalized' : ''}">${reason}</div>`;
+        }).join('')}
       </div>
     ` : '';
+    
+    // Feedback section for learning
+    const feedbackHtml = isPhishing && userProfileManager ? `
+      <div class="feedback-section">
+        <div class="feedback-header">Is this assessment correct?</div>
+        <div class="feedback-buttons">
+          <button class="feedback-btn correct" data-feedback="correct">✓ Yes, it's phishing</button>
+          <button class="feedback-btn incorrect" data-feedback="incorrect">✗ No, it's safe</button>
+        </div>
+      </div>
+    ` : '';
+    
+    // Educational tip based on threat type
+    const educationalTip = alertConfig.educationalTips && isPhishing ? getEducationalTip(reasons) : '';
     
     const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
     const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
@@ -220,6 +364,7 @@ function createResultPanel(data, links = []) {
             <div class="score-fill" style="width: ${score}%; background: ${isPhishing ? '#e74c3c' : '#27ae60'}"></div>
           </div>
           <div class="score-text">${label} (${score}% confidence)</div>
+          ${userProfileManager ? `<div class="personalized-note">Personalized for ${userProfileManager.profile.riskLevel} risk ${userProfileManager.profile.department} role</div>` : ''}
         </div>
         <div class="phish-reasons">
           <div class="reasons-header">
@@ -227,6 +372,8 @@ function createResultPanel(data, links = []) {
           </div>
           ${reasonsHtml}
         </div>
+        ${educationalTip}
+        ${feedbackHtml}
         ${linksHtml}
       </div>
     `;
@@ -235,6 +382,52 @@ function createResultPanel(data, links = []) {
   document.body.appendChild(baitPanel);
   
   baitPanel.querySelector('.phish-close').onclick = removePanel;
+  
+  // Handle feedback buttons
+  const feedbackButtons = baitPanel.querySelectorAll('.feedback-btn');
+  feedbackButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const feedback = e.target.dataset.feedback;
+      const threatId = cacheKey || Date.now().toString();
+      const isCorrect = feedback === 'correct';
+      
+      if (userProfileManager) {
+        await userProfileManager.recordFeedback(threatId, isCorrect, feedback);
+        
+        // Update button states
+        feedbackButtons.forEach(b => b.style.opacity = '0.5');
+        e.target.style.opacity = '1';
+        e.target.innerHTML = isCorrect ? '✓ Thank you!' : '✓ Noted, we\'ll improve';
+        
+        // Show learning message
+        setTimeout(() => {
+          const learningMsg = document.createElement('div');
+          learningMsg.className = 'learning-message';
+          learningMsg.innerHTML = `<small>🧠 BaitBlock is learning from your feedback</small>`;
+          e.target.parentNode.appendChild(learningMsg);
+        }, 500);
+      }
+    });
+  });
+}
+
+function getEducationalTip(reasons) {
+  const tips = {
+    'urgency': 'Tip: Legitimate organizations rarely require immediate action via email.',
+    'fear': 'Tip: Scare tactics are a common phishing technique. Verify through official channels.',
+    'financial': 'Tip: Never provide financial details via email. Contact your bank directly.',
+    'authority': 'Tip: Always verify requests from authority figures through independent means.',
+    'spelling': 'Tip: Poor spelling/grammar is often a sign of phishing attempts.',
+    'generic': 'Tip: Personalized emails from legitimate sources address you by name.'
+  };
+  
+  for (const [key, tip] of Object.entries(tips)) {
+    if (reasons.some(reason => reason.toLowerCase().includes(key))) {
+      return `<div class="educational-tip">💡 ${tip}</div>`;
+    }
+  }
+  
+  return '';
 }
 
 function removePanel() {
@@ -311,3 +504,6 @@ if (window.location.hostname.includes('mail.google.com') || window.location.host
   // Initial scan
   setTimeout(autoScanEmail, 2000);
 }
+
+// Initialize user profile system when page loads
+initializeUserProfile();

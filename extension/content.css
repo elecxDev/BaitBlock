@@ -204,6 +204,88 @@
   background: #4a4a4a;
 }
 
+.reason-item.personalized {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-left-color: #667eea;
+  color: #fff;
+}
+
+.personalized-note {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.feedback-section {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid #333;
+}
+
+.feedback-header {
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #d5d5d5;
+}
+
+.feedback-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-btn {
+  flex: 1;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #e5e5e5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feedback-btn:hover {
+  background: #4a4a4a;
+  border-color: #5a5a5a;
+}
+
+.feedback-btn.correct:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+}
+
+.feedback-btn.incorrect:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: #f44336;
+}
+
+.educational-tip {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 13px;
+  border-left: 3px solid #fff;
+}
+
+.learning-message {
+  margin-top: 8px;
+  text-align: center;
+  opacity: 0.7;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 0.7; transform: translateY(0); }
+}
+
 .phish-error {
   color: #dc3545;
   font-weight: 600;

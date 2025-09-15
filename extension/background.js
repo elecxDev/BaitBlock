@@ -21,8 +21,20 @@ async function callLocalAPI(text) {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('🛡️ BaitBlock: Extension installed');
+  
+  // Check if user needs setup
+  const stored = await chrome.storage.local.get(['setupComplete', 'userProfile']);
+  const needsSetup = !stored.setupComplete && (!stored.userProfile || !stored.userProfile.setupComplete);
+  
+  if (needsSetup) {
+    // Open setup page immediately after installation
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('setup.html')
+    });
+  }
+  
   chrome.contextMenus.create({
     id: "baitblock-scan",
     title: "Check for phishing",
@@ -81,6 +93,13 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       type: "SHOW_RESULT",
       result: result
     });
+  } else if (message.type === "OPEN_SETUP") {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('setup.html')
+    });
+  } else if (message.type === "PROFILE_SETUP_COMPLETE") {
+    console.log('✅ BaitBlock: User profile setup complete:', message.profile);
+    // Could send analytics or update threat models here
   }
   return true;
 });
