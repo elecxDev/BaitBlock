@@ -3,3 +3,6 @@ uvicorn
 transformers
 torch
 pydantic
+sentence-transformers
+scikit-learn
+numpy
