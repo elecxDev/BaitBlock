@@ -1,11 +1,16 @@
 const LOCAL_ENDPOINT = "http://localhost:5000/predict";
 
-async function callLocalAPI(text) {
+async function callLocalAPI(text, sender = null) {
   try {
+    const requestBody = { data: [text] };
+    if (sender) {
+      requestBody.sender = sender;
+    }
+    
     const response = await fetch(LOCAL_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
@@ -22,7 +27,7 @@ async function callLocalAPI(text) {
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log('🛡️ BaitBlock: Extension installed');
+  console.log('BaitBlock: Extension installed');
   
   // Check if user needs setup
   const stored = await chrome.storage.local.get(['setupComplete', 'userProfile']);
@@ -42,7 +47,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   });
   chrome.contextMenus.create({
     id: "baitblock-scan-email",
-    title: "🛡️ Scan this email",
+    title: "Scan this email",
     contexts: ["page"],
     documentUrlPatterns: [
       "https://mail.google.com/*",
@@ -78,7 +83,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.type === "ANALYZE_TEXT") {
-    const result = await callLocalAPI(message.text);
+    const result = await callLocalAPI(message.text, message.sender);
     sendResponse(result);
   } else if (message.type === "POPUP_SCAN") {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

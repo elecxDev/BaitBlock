@@ -29,8 +29,9 @@ function showSetupPrompt() {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #e5e5e5;
     padding: 16px 20px;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -44,7 +45,7 @@ function showSetupPrompt() {
   
   setupPrompt.innerHTML = `
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="font-size: 24px;">🛡️</div>
+      <img src="${chrome.runtime.getURL('icon.png')}" style="width: 24px; height: 24px;" alt="BaitBlock">
       <div>
         <div style="font-weight: 600; margin-bottom: 4px;">BaitBlock Setup</div>
         <div style="opacity: 0.9; font-size: 13px;">Personalize your phishing protection</div>
@@ -190,10 +191,20 @@ async function scanText(text, emailData = null) {
     const result = await chrome.runtime.sendMessage({
       type: "ANALYZE_TEXT",
       text: emailData ? emailData.text : text,
+      sender: emailData ? emailData.headers.from : null,
       userContext: userProfileManager ? userProfileManager.getOrganizationContext() : null
     });
     
-    // Apply personalized scoring if profile is available
+    // Check if result exists and has expected structure
+    if (!result) {
+      throw new Error("No response from background script");
+    }
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
+    // Apply personalized scoring if profile is available and result has details
     if (userProfileManager && result.details) {
       const baseScore = result.details.score || 0;
       const personalizedScore = userProfileManager.getPersonalizedThreatMultiplier(baseScore);
@@ -259,7 +270,6 @@ function createResultPanel(data, links = []) {
   ` : '';
   
   if (data.loading) {
-    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
     const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
     
     baitPanel.innerHTML = `
@@ -275,7 +285,6 @@ function createResultPanel(data, links = []) {
       </div>
     `;
   } else if (data.error) {
-    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
     const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
     const errorIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"/></svg>`;
     
@@ -334,21 +343,20 @@ function createResultPanel(data, links = []) {
       </div>
     ` : '';
     
-    // Feedback section for learning
-    const feedbackHtml = isPhishing && userProfileManager ? `
+    // Feedback section - always show for any result
+    const feedbackHtml = `
       <div class="feedback-section">
         <div class="feedback-header">Is this assessment correct?</div>
         <div class="feedback-buttons">
-          <button class="feedback-btn correct" data-feedback="correct">✓ Yes, it's phishing</button>
-          <button class="feedback-btn incorrect" data-feedback="incorrect">✗ No, it's safe</button>
+          <button class="feedback-btn correct" data-feedback="correct">✓ Yes, correct</button>
+          <button class="feedback-btn incorrect" data-feedback="incorrect">✗ No, incorrect</button>
         </div>
       </div>
-    ` : '';
+    `;
     
     // Educational tip based on threat type
     const educationalTip = alertConfig.educationalTips && isPhishing ? getEducationalTip(reasons) : '';
     
-    const shieldIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10.5V11.5C15.4,11.5 16,12.4 16,13V16C16,17.4 15.4,18 14.8,18H9.2C8.6,18 8,17.4 8,16V13C8,12.4 8.6,11.5 9.2,11.5V10.5C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10.5V11.5H13.5V10.5C13.5,8.7 12.8,8.2 12,8.2Z"/></svg>`;
     const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>`;
     const warningIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>`;
     const checkIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.41,10.09L6,11.5L11,16.5Z"/></svg>`;
@@ -368,7 +376,7 @@ function createResultPanel(data, links = []) {
         </div>
         <div class="phish-reasons">
           <div class="reasons-header">
-            ${isPhishing ? `${warningIcon} Why this looks like phishing:` : `${checkIcon} Content appears safe`}
+            ${isPhishing ? `${warningIcon} Insights:` : `${checkIcon} Content appears safe`}
           </div>
           ${reasonsHtml}
         </div>
@@ -385,28 +393,51 @@ function createResultPanel(data, links = []) {
   
   // Handle feedback buttons
   const feedbackButtons = baitPanel.querySelectorAll('.feedback-btn');
-  feedbackButtons.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+  console.log('🎯 Found feedback buttons:', feedbackButtons.length);
+  
+  feedbackButtons.forEach((btn, index) => {
+    console.log(`🎯 Setting up button ${index}:`, btn);
+    btn.addEventListener('click', (e) => {
+      console.log('🎯 Feedback button clicked!', e.target);
+      
       const feedback = e.target.dataset.feedback;
-      const threatId = cacheKey || Date.now().toString();
       const isCorrect = feedback === 'correct';
       
-      if (userProfileManager) {
-        await userProfileManager.recordFeedback(threatId, isCorrect, feedback);
-        
-        // Update button states
-        feedbackButtons.forEach(b => b.style.opacity = '0.5');
-        e.target.style.opacity = '1';
-        e.target.innerHTML = isCorrect ? '✓ Thank you!' : '✓ Noted, we\'ll improve';
-        
-        // Show learning message
-        setTimeout(() => {
-          const learningMsg = document.createElement('div');
-          learningMsg.className = 'learning-message';
-          learningMsg.innerHTML = `<small>🧠 BaitBlock is learning from your feedback</small>`;
-          e.target.parentNode.appendChild(learningMsg);
-        }, 500);
-      }
+      // Immediate visual response
+      e.target.style.background = '#4caf50';
+      e.target.style.color = 'white';
+      e.target.style.transform = 'scale(0.95)';
+      e.target.innerHTML = '✓ Feedback collected!';
+      
+      // Disable all buttons
+      feedbackButtons.forEach(b => {
+        b.disabled = true;
+        b.style.opacity = b === e.target ? '1' : '0.5';
+      });
+      
+      // Show success message after a brief moment
+      setTimeout(() => {
+        const feedbackSection = e.target.closest('.feedback-section');
+        if (feedbackSection) {
+          feedbackSection.innerHTML = `
+            <div style="
+              background: linear-gradient(135deg, #4caf50, #45a049);
+              color: white;
+              padding: 12px;
+              border-radius: 8px;
+              text-align: center;
+              font-size: 14px;
+              font-weight: 500;
+              animation: fadeIn 0.3s ease;
+            ">
+              ✓ Feedback collected! Thanks for helping improve BaitBlock
+            </div>
+          `;
+        }
+      }, 200);
+      
+      // Log the feedback
+      console.log(`📝 User feedback collected: ${isCorrect ? 'Correct assessment' : 'Incorrect assessment'}`);
     });
   });
 }
